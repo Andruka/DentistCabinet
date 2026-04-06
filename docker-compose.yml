@@ -1,0 +1,47 @@
+# Один образ на web + worker: иначе `docker compose build` запускает два параллельных `npm ci`
+# и перегружает сеть/registry (выглядит как «вечная» сборка).
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: dentist_cabinet
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  web:
+    build:
+      context: .
+      args:
+        NPM_REGISTRY: ${NPM_REGISTRY:-}
+    image: dentist-cabinet:local
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/dentist_cabinet?schema=public
+      JWT_SECRET: ${JWT_SECRET:-change-me-to-a-long-random-string-at-least-32-chars}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
+      APP_URL: ${APP_URL:-http://localhost:3000}
+    depends_on:
+      - db
+
+  worker:
+    image: dentist-cabinet:local
+    restart: unless-stopped
+    command: ["sh", "-c", "npx prisma migrate deploy && npm run worker"]
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/dentist_cabinet?schema=public
+      JWT_SECRET: ${JWT_SECRET:-change-me-to-a-long-random-string-at-least-32-chars}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      APP_URL: ${APP_URL:-http://localhost:3000}
+    depends_on:
+      - db
+
+volumes:
+  pgdata:

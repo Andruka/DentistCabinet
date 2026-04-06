@@ -1,0 +1,11 @@
+# Опционально (в основном Linux): сборка с сетью хоста — иногда помогает при ETIMEDOUT к registry.
+# Использование:
+#   docker compose -f docker-compose.yml -f docker-compose.build-host.yml build --no-cache
+#   docker compose -f docker-compose.yml -f docker-compose.build-host.yml up
+#
+# В Docker Desktop для macOS/Windows режим host для build может вести себя иначе, чем на Linux.
+
+services:
+  web:
+    build:
+      network: host
